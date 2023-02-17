@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import openpyxl
-
+from decimal import Decimal, ROUND_HALF_UP
 
 
 order_df = pd.read_excel('raw/Order.xlsx')
@@ -36,14 +36,21 @@ print(list_df)
 
 new_alipay_df['Partner_transaction_id'] = new_alipay_df['Partner_transaction_id'].astype(str)
 
-merged_df = list_df.merge(new_alipay_df, how='outer', left_on='主订单编号', right_on='Partner_transaction_id')
+merged_df = list_df.merge(new_alipay_df, how='left', left_on='主订单编号', right_on='Partner_transaction_id')
+
 merged_df['主订单编号'] = merged_df['主订单编号'].fillna(merged_df['Partner_transaction_id'])
-merged_df = merged_df.drop(columns=['Partner_transaction_id'])
+merged_df = merged_df.drop(columns=['Partner_transaction_id','Transaction_id','订单编号'])
+
+confirm_time = merged_df.pop('确认收货时间')  # 弹出“确认收货时间”列
+merged_df.insert(9, '确认收货时间', confirm_time)  # 将“确认收货时间”列插入到“订单付款时间”列的后面
 
 
-merged_df['Amount'] = (merged_df['买家实际支付金额'] / merged_df['Rate']).round(2)
-# merged_df['Amount'] = (merged_df['买家实际支付金额'] / merged_df['Rate'])
+merged_df['Amount_to_split'] = merged_df['买家实际支付金额']/merged_df['Rate']
+# merged_df['Amount_to_split'] = pd.to_numeric(merged_df['Amount_to_split']) #将上一串代码计算出来的文本格式改为数字格式
+
+Amount_to_split = merged_df.pop('Amount_to_split')  # 弹出“确认收货时间”列
+merged_df.insert(10, 'Amount_to_split', Amount_to_split)  # 将“确认收货时间”列插入到“订单付款时间”列的后面
 
 
 # 保存修改后的文件
-merged_df.to_excel("List_modified2.xlsx", index=False, encoding="gbk")
+merged_df.to_excel("List_modified2.xlsx", index=False)
